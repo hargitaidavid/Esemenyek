@@ -1,0 +1,46 @@
+Eseménykezelő plugin WordPress-hez
+==================================
+==================================
+
+Készítette: Hargitai Dávid <david *kukac* minosegiweb.hu>
+Verzió: 0.1
+
+
+LEÍRÁS
+======
+Ez a plugin létrehoz egy esemény tartalomtípust, mellyel könnyebben kezelhetők az esemény jellegű tartalmak.
+Funkciók:
+* könnyen megadható kezdő és befejező időpontok
+* elkövetkező és múltbeli események megkülönböztetése
+* közelgő eseményeket listázó widget
+* térképkezelés az esemény címe alapján Google Maps segítségével (API kulcs szükséges)
+* események jellegének kezelése (egyéni címkézés)
+
+
+TELEPÍTÉS
+=========
+Másold az esemenyek mappát a wp-content/plugins könyvtárba, aktiváld a plugint és kész.
+Az eseményeid listáját a /esemenyek oldalon találod (amennyiben be vannak kapcsolva a szép URL-ek és vettél már fel eseményeket)
+
+
+BEÁLLÍTÁSOK
+===========
+Az eseményeidet egy új Események nevű főmenüpontban tudod kezelni.
+A globális beállításokat a Beállítások -> Események beállításai menüpontban tudod elvégezni.
+A widget neve: Legutóbbi események.
+Az események listája az [esemenyek] shortcode által jelenik meg a /esemenyek oldalon (ez automatikusan létrejön a megfelelő tartalommal a plugin aktiválásakor). Ha szeretnéd, hogy más módon listázódjanak, megadhatod a shortcode-nak a szures és rendezes paramétereket, például így:
+
+[esemenyek rendezes="ASC" szures="jovobeli"]
+<h2><a id="regebbi-esemenyek">Régebbi események</a></h2>
+[esemenyek szures="multbeli"]
+
+A rendezes paraméter alapértelmezésben DESC, azaz időpont szerint csökkenő, szűrés pedig alapértelmezésben nincs, minden megjelenik.
+
+
+FIGYELEM!
+=========
+* Mindenképpen meg kell adni kezdő időpontot, hogy megjelenjen az esemény a /esemenyek oldalon!
+* A térkép megjelenítéséhez szükséges Google API kulcs.Ha nincs, itt szerezhetsz: http://code.google.com/apis/maps/signup.html
+* Amennyiben szeretnéd megváltoztatni az események megjelenését, másold a plugin könyvtárában lévő esemeny_sablon.php fájlt az általad használt WordPress sablon könyvtárába, és ezt a fájlt szerkeszd ízlés szerint!
+
+

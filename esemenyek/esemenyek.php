@@ -3,10 +3,12 @@
 Plugin Name: Események
 Plugin URI: http://minosegiweb.hu
 Description: Esemény tartalomtípus létrehozása és kezelése
-Author: Hargitai Dávid
 Version: 0.1
+Author: Hargitai Dávid
 Author URI: http://minosegiweb.hu
+License: GPL2
 */
+?><?php
 
 define('ALAP_TERKEP_SZELESSEG', 250);
 define('ALAP_TERKEP_MAGASSAG', 250);

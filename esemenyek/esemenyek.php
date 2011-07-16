@@ -142,7 +142,7 @@ class Esemenyek {
 		if ($wp->query_vars["post_type"] == "mw_esemeny")
 		{
 		    //$plugin_path = WP_PLUGIN_URL.'/'.str_replace(basename( __FILE__),"",plugin_basename(__FILE__));
-			$plugin_path = 'wp-content/plugins/esemenyek';
+			$plugin_path = '/wp-content/plugins/esemenyek';
 			$beallitasok = get_option('es_options');
 			
 			wp_register_style( 'esemenyekCss', $plugin_path.'/css/esemenyek.css' );
@@ -647,7 +647,8 @@ class Esemenyek {
 	        $kimenet .= '<h3>Térkép</h3><div id="terkep" style="height:'.$m.'px;width:'.$sz.'px;"></div>';
     	    $kimenet .= '
     	    <script>
-    	        $(document).ready(function(){
+    	        google.load("jquery", "1.6.2");
+    	        google.setOnLoadCallback(function(){
     	            var myLatlng = new google.maps.LatLng('.$lat.','.$lng.');
                     var myOptions = {
                       zoom: '.$nagyitas.',

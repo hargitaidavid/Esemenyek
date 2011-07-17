@@ -249,14 +249,28 @@ class Esemenyek {
 	    {	        
 	        $kimenet .= '<h3>Térkép</h3><div id="terkep" style="height:'.$m.'px;width:'.$sz.'px;"></div>';
     	    $kimenet .= '
-    	    <input type="hidden" name="terkep-lat" id="terkep-lat" value="'.$lat.'" />
-    	    <input type="hidden" name="terkep-lng" id="terkep-lng" value="'.$lng.'" />
-    	    <input type="hidden" name="terkep-nagyitas" id="terkep-nagyitas" value="'.$nagyitas.'" />
-    	    <input type="hidden" name="terkep-mutatofelirat" id="terkep-mutatofelirat" value="'. (!empty($mutato) ? $mutato : 'nincs') .'" />
-    	    <input type="hidden" name="terkep-infobuborek" id="terkep-infobuborek" value="'. (!empty($infobuborek) ? str_replace(array("\r", "\r\n", "\n"), '', $infobuborek) : 'nincs') .'" />
     	    <script>
     	        google.setOnLoadCallback(function(){
-    	            terkepBetolt();
+    	            var myLatlng = new google.maps.LatLng('.$lat.','.$lng.');
+                    var myOptions = {
+                      zoom: '.$nagyitas.',
+                      center: myLatlng,
+                      mapTypeId: google.maps.MapTypeId.ROADMAP
+                    };
+                    var map = new google.maps.Map(document.getElementById("terkep"), myOptions);
+                    
+                    var marker = new google.maps.Marker({
+                        map: map,
+                        '. (!empty($mutato) ? 'title: "'.$mutato.'",' : '') .'
+                        position: myLatlng
+                    });
+                    '. (!empty($infobuborek) ? '
+                    var infowindow = new google.maps.InfoWindow({
+                        maxWidth: 200,
+                        content: "'.str_replace(array("\r", "\r\n", "\n"), '', $infobuborek).'"
+                    });
+                    infowindow.open(map,marker);' : '' )
+                    .'
                 });
             </script>
     	    ';

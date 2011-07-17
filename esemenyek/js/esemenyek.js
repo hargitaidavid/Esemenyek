@@ -12,17 +12,9 @@ $j(function()
         function terkepAdatokFrissitese()
         {
             var cim = '';
-            if($j("#esemeny-helyszin-iranyitoszam").val() != '')
+            if($j("#esemeny-helyszin").val() != '')
             {
-                cim += $j("#esemeny-helyszin-iranyitoszam").val() + ' ';
-            }
-            if($j("#esemeny-helyszin-varos").val() != '')
-            {
-                cim += $j("#esemeny-helyszin-varos").val() + ' ';
-            }
-            if($j("#esemeny-helyszin-cim").val() != '')
-            {
-                cim += $j("#esemeny-helyszin-cim").val();
+                cim += $j("#esemeny-helyszin").val();
             }
 
             geoEncode(cim);
@@ -70,6 +62,6 @@ $j(function()
             maxWidth: 200,
             content: "<h1>Infó buborék</h1><p>Valahogy <strong>így</strong> néz ki a szöveg benne, amit beleírunk <em>a szerkesztőbe</em>.</p>"
         });
-        infowindow.open(map,marker);
+        infowindow.open(map, marker);
     }
 });

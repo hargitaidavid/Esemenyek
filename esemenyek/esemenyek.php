@@ -18,9 +18,7 @@ class Esemenyek {
 	var $meta_fields = array(
 	    'esemeny-idopont-kezdo',
 	    'esemeny-idopont-befejezo',
-	    'esemeny-helyszin-iranyitoszam',
-	    'esemeny-helyszin-varos',
-	    'esemeny-helyszin-cim',
+	    'esemeny-helyszin',
 	    'esemeny-google-terkep',
 	    'esemeny-google-terkep-lng',
 	    'esemeny-google-terkep-lat',
@@ -97,6 +95,177 @@ class Esemenyek {
 		
 	}
 	
+	function sabloncimke_esemenyek($atts, $content = null)
+	{
+	    $kimenet = '';
+	    
+	    extract(shortcode_atts(array( 
+            'rendezes' => 'DESC',
+            'szures' => '',
+            'jelleg' =>''
+        ), $atts));
+        
+        $opciok = array(
+            'post_type'=>'mw_esemeny',
+            'jelleg'=>$jelleg,
+            'post_status'=>'publish',
+            'order'=>$rendezes,
+            'orderby'=>'meta_value',
+            'meta_key'=>'esemeny-idopont-kezdo'
+        );
+        
+        // Igazítások
+        if(!in_array($opciok['rendezes'], array('DESC', 'ASC')))
+        {
+            $opciok['rendezes'] = 'DESC';
+        }
+        
+        if($szures == 'jovobeli')
+        {
+            $opciok = array_merge($opciok, array('meta_compare'=>'>', 'meta_value'=>date("Y-m-d H:i:s")));
+        }
+        elseif($szures == 'multbeli')
+        {
+            $opciok = array_merge($opciok, array('meta_compare'=>'<', 'meta_value'=>date("Y-m-d H:i:s")));
+        }
+        
+        // Esemény típusú tartalmak lekérdezése
+        query_posts($opciok);
+
+
+        if (have_posts())
+        {
+            $kimenet .= '<ul class="dbem_events_list">';
+            
+            while (have_posts())
+            {
+                the_post();
+                
+                $custom = get_post_custom($post->ID);
+        		$cim = $custom["esemeny-helyszin"][0];
+        		$kezdes = $custom["esemeny-idopont-kezdo"][0];
+        		if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
+        		    $kezdes))
+        		{
+        		    $kezdes_timestamp = datetime_to_timestamp($kezdes);
+        		}
+        		$befejezes = $custom["esemeny-idopont-befejezo"][0];
+        		if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
+        		    $befejezes))
+        		{
+        		    $befejezes_timestamp = datetime_to_timestamp($befejezes);
+        		}
+                
+                $kimenet .= '
+                <li>
+                    <h3 class="entry-title"><a href="'.get_permalink().'">'.get_the_title().'</a></h3>
+                    <div class="entry-meta">'.
+                        (!empty($cim) ? '
+                        <span class="meta-prep meta-prep-entry-location">Helyszín:</span> 
+                        <span class="entry-location">'.$cim.'</span><br />' : '') .'
+                        <span class="meta-prep meta-prep-entry-date">Időpont:</span> 
+                        <span class="entry-date">'.date_i18n("Y. F j., l - H:i", $kezdes_timestamp).'</span>
+                    </div>
+                    <p style="text-align:justify;">'.get_the_excerpt().'</p>
+                </li>';
+            
+            }
+        
+            $kimenet .= '</ul>';
+        }
+        else
+        {
+            $kimenet = 'Nincsenek megjeleníthető események.';
+        }
+
+        
+        // Loop visszaállítása
+        wp_reset_query();
+        return $kimenet;
+    }
+	
+	function sabloncimke_esemeny($atts, $content = null)
+	{
+	    $kimenet = '';
+	    global $post;
+	    
+	    $custom = get_post_custom($post->ID);
+		$es_options = get_option('es_options');
+		$alap_google_terkep_szelesseg = ($es_options['google_terkep_szelesseg'] AND is_numeric($es_options['google_terkep_szelesseg'])) ? $es_options['google_terkep_szelesseg'] : ALAP_TERKEP_SZELESSEG;
+        $alap_google_terkep_magassag = ($es_options['google_terkep_magassag'] AND is_numeric($es_options['google_terkep_magassag'])) ? $es_options['google_terkep_magassag'] : ALAP_TERKEP_MAGASSAG;
+        $alap_google_terkep_nagyitas = ($es_options['google_terkep_nagyitas'] AND is_numeric($es_options['google_terkep_nagyitas'])) ? $es_options['google_terkep_nagyitas'] : ALAP_TERKEP_NAGYITAS;
+
+		$cim = $custom["esemeny-helyszin"][0];
+		$kezdes = $custom["esemeny-idopont-kezdo"][0];
+		$befejezes = $custom["esemeny-idopont-befejezo"][0];
+        
+	    $kell_terkep = $custom['esemeny-google-terkep'] ? $custom['esemeny-google-terkep'] : 0;
+	    if($kell_terkep)
+	    {
+	        $sz = $custom['esemeny-google-terkep-szelesseg'][0] ? $custom['esemeny-google-terkep-szelesseg'][0] : $alap_google_terkep_szelesseg;
+    	    $m = $custom['esemeny-google-terkep-magassag'][0] ? $custom['esemeny-google-terkep-magassag'][0] : $alap_google_terkep_magassag;
+    	    $nagyitas = $custom['esemeny-google-terkep-nagyitas'][0] ? $custom['esemeny-google-terkep-nagyitas'][0] : $alap_google_terkep_nagyitas;
+    	    $lng = $custom['esemeny-google-terkep-lng'][0];
+    	    $lat = $custom['esemeny-google-terkep-lat'][0];
+    	    $infobuborek = $custom["esemeny-google-terkep-info-buborek-tartalom"][0];
+            $mutato = $custom["esemeny-google-terkep-mutato-felirat"][0];
+	    }
+	    
+	    if(!empty($kezdes))
+	    {
+	        $kezdes = $custom["esemeny-idopont-kezdo"][0];
+    		if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
+    		    $kezdes))
+    		{
+    		    $kezdes_timestamp = datetime_to_timestamp($kezdes);
+    		}
+    		
+	        $kimenet .= '<h3>Időpont</h3>';
+	        $kimenet .= '<p>'.( !empty($befejezes) ? '<strong>Keződik</strong>: ' : '') . date_i18n("Y. F j., l - H:i", $kezdes_timestamp);
+	        
+	        if(!empty($befejezes))
+	        {
+	            if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
+        		    $befejezes))
+        		{
+        		    $befejezes_timestamp = datetime_to_timestamp($befejezes);
+        		}
+        		
+	            $kimenet .= '<br><strong>Vége</strong>: '. date_i18n("Y. F j., l - H:i", $befejezes_timestamp);
+            }
+            
+            $kimenet .= '</p>';
+	    }
+	    
+	    if(!empty($varos) OR !empty($cim))
+	    {
+	        $kimenet .= '<h3>Helyszín</h3>';
+	        $kimenet .= '<p>'.( !empty($varos) ? $varos.(!empty($cim) ? ', ' : '') : '' ).( !empty($cim) ? $cim : '' ).'</p>';
+	    }
+	    
+	    //$kimenet .= '<p class="jobbra-igazitott"><a class="vastag-link" href="/esemenyek#regebbi-esemenyek">Régebbi események</a></p>';
+	    
+	    if($kell_terkep AND !empty($lat) AND !empty($lng))
+	    {	        
+	        $kimenet .= '<h3>Térkép</h3><div id="terkep" style="height:'.$m.'px;width:'.$sz.'px;"></div>';
+    	    $kimenet .= '
+    	    <input type="hidden" name="terkep-lat" id="terkep-lat" value="'.$lat.'" />
+    	    <input type="hidden" name="terkep-lng" id="terkep-lng" value="'.$lng.'" />
+    	    <input type="hidden" name="terkep-nagyitas" id="terkep-nagyitas" value="'.$nagyitas.'" />
+    	    <input type="hidden" name="terkep-mutatofelirat" id="terkep-mutatofelirat" value="'. (!empty($mutato) ? $mutato : 'nincs') .'" />
+    	    <input type="hidden" name="terkep-infobuborek" id="terkep-infobuborek" value="'. (!empty($infobuborek) ? str_replace(array("\r", "\r\n", "\n"), '', $infobuborek) : 'nincs') .'" />
+    	    <script>
+    	        google.setOnLoadCallback(function(){
+    	            terkepBetolt();
+                });
+            </script>
+    	    ';
+	    }
+	    
+        
+        return $kimenet;
+    }
+	
 	function es_menu()
 	{ 
         add_options_page(
@@ -142,17 +311,15 @@ class Esemenyek {
 		if ($wp->query_vars["post_type"] == "mw_esemeny")
 		{
 		    //$plugin_path = WP_PLUGIN_URL.'/'.str_replace(basename( __FILE__),"",plugin_basename(__FILE__));
-			$plugin_path = '/wp-content/plugins/esemenyek';
+			$plugin_path = 'wp-content/plugins/esemenyek';
 			$beallitasok = get_option('es_options');
 			
-			wp_register_style( 'esemenyekCss', $plugin_path.'/css/esemenyek.css' );
+			wp_register_style( 'esemenyekCss', '/'.$plugin_path.'/css/esemenyek.css' );
             wp_enqueue_style( 'esemenyekCss' );
 			
 			if(is_single())
 			{
-        	    $apiKulcs = $beallitasok['google_api_key'];
-        	    
-			    wp_register_script('googleAjaxApiJs', 'http://www.google.com/jsapi?key='.$apiKulcs);
+			    wp_register_script('googleAjaxApiJs', 'http://www.google.com/jsapi');
                 wp_enqueue_script( 'googleAjaxApiJs' );
                 wp_register_script('googleMapApiJs', 'http://maps.google.com/maps/api/js?sensor=false');
                 wp_enqueue_script( 'googleMapApiJs' );
@@ -226,7 +393,6 @@ class Esemenyek {
 	function admin_init() 
 	{
 	    $beallitasok = get_option('es_options');
-	    $apiKulcs = $beallitasok['google_api_key'];
 	    
 	    wp_register_style( 'anytimeDateTimePickerCss', WP_PLUGIN_URL.'/esemenyek/css/anytimec.css' );
         wp_enqueue_style( 'anytimeDateTimePickerCss' );
@@ -234,7 +400,7 @@ class Esemenyek {
         wp_enqueue_style( 'esemenyekCss' );
         wp_register_script( 'anytimeDateTimePickerJs', plugins_url('/js/anytimec.js', __FILE__) );
         wp_enqueue_script( 'anytimeDateTimePickerJs' );
-        wp_register_script('googleAjaxApiJs', 'http://www.google.com/jsapi?key='.$apiKulcs);
+        wp_register_script('googleAjaxApiJs', 'http://www.google.com/jsapi');
         wp_enqueue_script( 'googleAjaxApiJs' );
         wp_register_script('googleMapApiJs', 'http://maps.google.com/maps/api/js?sensor=false');
         wp_enqueue_script( 'googleMapApiJs' );
@@ -252,9 +418,7 @@ class Esemenyek {
 			"cb" => "<input type=\"checkbox\" />",
 			"title" => "Esemény címe",
 			"es_leiras" => "Leírás",
-			"es_irszam" => "Irányítószám",
-			"es_varos" => "Város",
-			"es_cim" => "Cím",
+			"es_helyszin" => "Helyszín",
 			"es_google_terkep" => "Kell térkép?",
 			"es_google_terkep_lng" => "Google térkép longitúdó",
 			"es_google_terkep_lat" => "Google térkép latitúdó",
@@ -279,17 +443,9 @@ class Esemenyek {
 			case "es_leiras":
 				the_excerpt();
 				break;
-			case "es_helyszin_iranyitoszam":
+			case "es_helyszin":
 				$custom = get_post_custom();
-				echo $custom["esemeny-helyszin-iranyitoszam"][0];
-				break;
-			case "es_helyszin_varos":
-				$custom = get_post_custom();
-				echo $custom["esemeny-helyszin-varos"][0];
-				break;
-			case "es_helyszin_cim":
-				$custom = get_post_custom();
-				echo $custom["esemeny-helyszin-cim"][0];
+				echo $custom["esemeny-helyszin"][0];
 				break;
 			case "es_google_terkep":
 				$custom = get_post_custom();
@@ -347,7 +503,6 @@ class Esemenyek {
         //load our options array 
         $es_options = get_option('es_options'); 
         
-        $google_api_key = $es_options['google_api_key'];
         $google_terkep_szelesseg = ($es_options['google_terkep_szelesseg'] AND is_numeric($es_options['google_terkep_szelesseg'])) ? $es_options['google_terkep_szelesseg'] : ALAP_TERKEP_SZELESSEG;
         $google_terkep_magassag = ($es_options['google_terkep_magassag'] AND is_numeric($es_options['google_terkep_magassag'])) ? $es_options['google_terkep_magassag'] : ALAP_TERKEP_MAGASSAG;
         $google_terkep_nagyitas = ($es_options['google_terkep_nagyitas'] AND is_numeric($es_options['google_terkep_nagyitas'])) ? $es_options['google_terkep_nagyitas'] : ALAP_TERKEP_NAGYITAS;
@@ -361,11 +516,7 @@ class Esemenyek {
                 <fieldset>
                     <legend>Google térkép</legend>
                 
-                    <table class="form-table"> 
-                        <tr valign="top"> 
-                            <th scope="row"><label for="google_api_key"><?php _e('Google API kulcs', 'es-plugin') ?></th> 
-                            <td><input id="google_api_key" name="es_options[google_api_key]" value="<?php echo $google_api_key; ?>" size="85" ></td> 
-                        </tr>
+                    <table class="form-table">
                         <tr valign="top"> 
                             <th scope="row"><label for="google_terkep_szelesseg"><?php _e('Térkép alapértelmezett szélessége (képpontban)', 'es-plugin') ?></th> 
                             <td><input id="google_terkep_szelesseg" name="es_options[google_terkep_szelesseg]" value="<?php echo $google_terkep_szelesseg; ?>" size="3" /></td>
@@ -405,9 +556,7 @@ class Esemenyek {
         $alap_google_terkep_magassag = ($es_options['google_terkep_magassag'] AND is_numeric($es_options['google_terkep_magassag'])) ? $es_options['google_terkep_magassag'] : ALAP_TERKEP_MAGASSAG;
         $alap_google_terkep_nagyitas = ($es_options['google_terkep_nagyitas'] AND is_numeric($es_options['google_terkep_nagyitas'])) ? $es_options['google_terkep_nagyitas'] : ALAP_TERKEP_NAGYITAS;
         
-		$iranyitoszam = $custom["esemeny-helyszin-iranyitoszam"][0];
-		$varos = $custom["esemeny-helyszin-varos"][0];
-		$cim = $custom["esemeny-helyszin-cim"][0];
+		$cim = $custom["esemeny-helyszin"][0];
 		$kezdes = $custom["esemeny-idopont-kezdo"][0];
 		$befejezes = $custom["esemeny-idopont-befejezo"][0];
 		$terkep = $custom["esemeny-google-terkep"][0] ? 'checked="checked"' : '';
@@ -429,16 +578,8 @@ class Esemenyek {
         	<td><input name="esemeny-idopont-befejezo" id="idopont-befejezo" size="16" value="<?php echo $befejezes; ?>" /></td>
         </tr>
         <tr valign="top">
-        	<th scope="row"><label for="esemeny-helyszin-iranyitoszam">Irányítószám:</label></th>
-        	<td><input name="esemeny-helyszin-iranyitoszam" id="esemeny-helyszin-iranyitoszam" size="3" value="<?php echo $iranyitoszam; ?>" /></td>
-        </tr>
-        <tr valign="top">
-        	<th scope="row"><label for="esemeny-helyszin-varos">Város:</label></th>
-        	<td><input name="esemeny-helyszin-varos" id="esemeny-helyszin-varos" size="25" value="<?php echo $varos; ?>" /></td>
-        </tr>
-        <tr valign="top">
-        	<th scope="row"><label for="esemeny-helyszin-cim">Cím:</label></th>
-        	<td><input name="esemeny-helyszin-cim" id="esemeny-helyszin-cim" size="25" value="<?php echo $cim; ?>" /></td>
+        	<th scope="row"><label for="esemeny-helyszin">Helyszín:</label></th>
+        	<td><input name="esemeny-helyszin" id="esemeny-helyszin" size="25" value="<?php echo $cim; ?>" /></td>
         </tr>
         <tr valign="top">
         	<th scope="row"><label for="esemeny-google-terkep">Kell térkép az eseményhez?</label></th>
@@ -486,197 +627,7 @@ class Esemenyek {
 
 <?php
 	}
-	
-	function sabloncimke_esemenyek($atts, $content = null)
-	{
-	    $kimenet = '';
-	    
-	    extract(shortcode_atts(array( 
-            'rendezes' => 'DESC',
-            'szures' => ''
-        ), $atts));
-        
-        $opciok = array(
-            'post_type'=>'mw_esemeny',
-            'post_status'=>'publish',
-            'order'=>$rendezes,
-            'orderby'=>'meta_value',
-            'meta_key'=>'esemeny-idopont-kezdo'
-        );
-        
-        // Igazítások
-        if(!in_array($opciok['rendezes'], array('DESC', 'ASC')))
-        {
-            $opciok['rendezes'] = 'DESC';
-        }
-        
-        if($szures == 'jovobeli')
-        {
-            $opciok = array_merge($opciok, array('meta_compare'=>'>', 'meta_value'=>date("Y-m-d H:i:s")));
-        }
-        elseif($szures == 'multbeli')
-        {
-            $opciok = array_merge($opciok, array('meta_compare'=>'<', 'meta_value'=>date("Y-m-d H:i:s")));
-        }
-        
-        // Esemény típusú tartalmak lekérdezése
-        query_posts($opciok);
 
-
-        if (have_posts())
-        {
-            $kimenet .= '<ul class="dbem_events_list">';
-            
-            while (have_posts())
-            {
-                the_post();
-                
-                $custom = get_post_custom($post->ID);
-        		$iranyitoszam = $custom["esemeny-helyszin-iranyitoszam"][0];
-        		$varos = $custom["esemeny-helyszin-varos"][0];
-        		$cim = $custom["esemeny-helyszin-cim"][0];
-        		$kezdes = $custom["esemeny-idopont-kezdo"][0];
-        		if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
-        		    $kezdes))
-        		{
-        		    $kezdes_timestamp = datetime_to_timestamp($kezdes);
-        		}
-        		$befejezes = $custom["esemeny-idopont-befejezo"][0];
-        		if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
-        		    $befejezes))
-        		{
-        		    $befejezes_timestamp = datetime_to_timestamp($befejezes);
-        		}
-                
-                $kimenet .= '
-                <li>
-                    <h3 class="entry-title"><a href="'.get_permalink().'">'.get_the_title().'</a></h3>
-                    <div class="entry-meta">'.
-                        (!empty($varos) ? '
-                        <span class="meta-prep meta-prep-entry-location">Helyszín:</span> 
-                        <span class="entry-location">'.$varos.(!empty($cim) ? (', '.$cim) : '').'</span><br />' : 
-                            (!empty($cim) ? '
-                            <span class="meta-prep meta-prep-entry-location">Helyszín:</span> 
-                            <span class="entry-location">'.$cim.'</span><br />' : '') 
-                        ) .'
-                        <span class="meta-prep meta-prep-entry-date">Időpont:</span> 
-                        <span class="entry-date">'.date_i18n("Y. F j., l - H:i", $kezdes_timestamp).'</span>
-                    </div>
-                    <p style="text-align:justify;">'.get_the_excerpt().'</p>
-                </li>';
-            
-            }
-        
-            $kimenet .= '</ul>';
-        }
-        else
-        {
-            $kimenet = 'Nincsenek megjeleníthető események.';
-        }
-
-        
-        // Loop visszaállítása
-        wp_reset_query();
-        return $kimenet;
-    }
-	
-	function sabloncimke_esemeny($atts, $content = null)
-	{
-	    $kimenet = '';
-	    global $post;
-	    
-	    $custom = get_post_custom($post->ID);
-		$es_options = get_option('es_options');
-		$alap_google_terkep_szelesseg = ($es_options['google_terkep_szelesseg'] AND is_numeric($es_options['google_terkep_szelesseg'])) ? $es_options['google_terkep_szelesseg'] : ALAP_TERKEP_SZELESSEG;
-        $alap_google_terkep_magassag = ($es_options['google_terkep_magassag'] AND is_numeric($es_options['google_terkep_magassag'])) ? $es_options['google_terkep_magassag'] : ALAP_TERKEP_MAGASSAG;
-        $alap_google_terkep_nagyitas = ($es_options['google_terkep_nagyitas'] AND is_numeric($es_options['google_terkep_nagyitas'])) ? $es_options['google_terkep_nagyitas'] : ALAP_TERKEP_NAGYITAS;
-
-        $varos = $custom["esemeny-helyszin-varos"][0];
-		$cim = $custom["esemeny-helyszin-cim"][0];
-		$kezdes = $custom["esemeny-idopont-kezdo"][0];
-		$befejezes = $custom["esemeny-idopont-befejezo"][0];
-        
-	    $kell_terkep = $custom['esemeny-google-terkep'] ? $custom['esemeny-google-terkep'] : 0;
-	    if($kell_terkep)
-	    {
-	        $sz = $custom['esemeny-google-terkep-szelesseg'][0] ? $custom['esemeny-google-terkep-szelesseg'][0] : $alap_google_terkep_szelesseg;
-    	    $m = $custom['esemeny-google-terkep-magassag'][0] ? $custom['esemeny-google-terkep-magassag'][0] : $alap_google_terkep_magassag;
-    	    $nagyitas = $custom['esemeny-google-terkep-nagyitas'][0] ? $custom['esemeny-google-terkep-nagyitas'][0] : $alap_google_terkep_nagyitas;
-    	    $lng = $custom['esemeny-google-terkep-lng'][0];
-    	    $lat = $custom['esemeny-google-terkep-lat'][0];
-    	    $infobuborek = $custom["esemeny-google-terkep-info-buborek-tartalom"][0];
-            $mutato = $custom["esemeny-google-terkep-mutato-felirat"][0];
-	    }
-	    
-	    if(!empty($kezdes))
-	    {
-	        $kezdes = $custom["esemeny-idopont-kezdo"][0];
-    		if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
-    		    $kezdes))
-    		{
-    		    $kezdes_timestamp = datetime_to_timestamp($kezdes);
-    		}
-    		
-	        $kimenet .= '<h3>Időpont</h3>';
-	        $kimenet .= '<p>'.( !empty($befejezes) ? '<strong>Keződik</strong>: ' : '') . date_i18n("Y. F j., l - H:i", $kezdes_timestamp);
-	        
-	        if(!empty($befejezes))
-	        {
-	            if(preg_match('/(\d{4})(?:\-)?([0]{1}\d{1}|[1]{1}[0-2]{1})(?:\-)?([0-2]{1}\d{1}|[3]{1}[0-1]{1})(?:\s)?([0-1]{1}\d{1}|[2]{1}[0-3]{1})(?::)?([0-5]{1}\d{1})(?::)?([0-5]{1}\d{1})/',
-        		    $befejezes))
-        		{
-        		    $befejezes_timestamp = datetime_to_timestamp($befejezes);
-        		}
-        		
-	            $kimenet .= '<br><strong>Vége</strong>: '. date_i18n("Y. F j., l - H:i", $befejezes_timestamp);
-            }
-            
-            $kimenet .= '</p>';
-	    }
-	    
-	    if(!empty($varos) OR !empty($cim))
-	    {
-	        $kimenet .= '<h3>Helyszín</h3>';
-	        $kimenet .= '<p>'.( !empty($varos) ? $varos.(!empty($cim) ? ', ' : '') : '' ).( !empty($cim) ? $cim : '' ).'</p>';
-	    }
-	    
-	    //$kimenet .= '<p class="jobbra-igazitott"><a class="vastag-link" href="/esemenyek#regebbi-esemenyek">Régebbi események</a></p>';
-	    
-	    if($kell_terkep AND !empty($lat) AND !empty($lng))
-	    {	        
-	        $kimenet .= '<h3>Térkép</h3><div id="terkep" style="height:'.$m.'px;width:'.$sz.'px;"></div>';
-    	    $kimenet .= '
-    	    <script>
-    	        google.load("jquery", "1.6.2");
-    	        google.setOnLoadCallback(function(){
-    	            var myLatlng = new google.maps.LatLng('.$lat.','.$lng.');
-                    var myOptions = {
-                      zoom: '.$nagyitas.',
-                      center: myLatlng,
-                      mapTypeId: google.maps.MapTypeId.ROADMAP
-                    };
-                    var map = new google.maps.Map(document.getElementById("terkep"), myOptions);
-                    
-                    var marker = new google.maps.Marker({
-                        map: map,
-                        '. (!empty($mutato) ? 'title: "'.$mutato.'",' : '') .'
-                        position: myLatlng
-                    });
-                    '. (!empty($infobuborek) ? '
-                    var infowindow = new google.maps.InfoWindow({
-                        maxWidth: 200,
-                        content: "'.str_replace(array("\r", "\r\n", "\n"), '', $infobuborek).'"
-                    });
-                    infowindow.open(map,marker);' : '' )
-                    .'
-                });
-            </script>
-    	    ';
-	    }
-	    
-        
-        return $kimenet;
-    }
     
 }
 
